@@ -24,7 +24,7 @@ export default async function ProductPage() {
       <SiteHeader />
       <main>
         <div className={styles.productOverview}>
-          <div className={styles.productOverviewInner}>
+          <div className={styles.productOverviewGrid}>
             <ProductImage alt={product.name} />
             <PurchasePanel product={product} />
           </div>
