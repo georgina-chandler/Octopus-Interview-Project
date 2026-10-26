@@ -17,6 +17,8 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "26.6.5",
     "@types/react": "19.2.14",
     "jsdom": "^28.1.0",
     "json-graphql-server": "^3.3.0",

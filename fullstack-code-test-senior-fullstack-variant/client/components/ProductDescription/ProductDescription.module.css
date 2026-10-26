@@ -1,0 +1,16 @@
+.section {
+  padding: 2rem 0;
+  border-bottom: 1px solid rgba(240, 255, 255, 0.1);
+}
+
+.heading {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.body {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--ice);
+}
