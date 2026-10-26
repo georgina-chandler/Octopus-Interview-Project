@@ -23,8 +23,8 @@ export default async function ProductPage() {
     <>
       <SiteHeader />
       <main>
-        <div className={styles.hero}>
-          <div className={styles.heroInner}>
+        <div className={styles.productOverview}>
+          <div className={styles.productOverviewInner}>
             <ProductImage alt={product.name} />
             <PurchasePanel product={product} />
           </div>
