@@ -3,7 +3,6 @@ import { fetchGraphQL } from "./client";
 export interface Product {
   id: string;
   name: string;
-  /** Short line shown under the product name, e.g. "25W // Packet of 4" */
   subtitle: string;
   description: string;
   /** Price in pence */
