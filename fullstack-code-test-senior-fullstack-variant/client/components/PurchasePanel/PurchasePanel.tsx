@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatPackSummary, formatPrice } from "../../lib/format/product";
+import { formatPrice } from "../../lib/format/product";
 import type { Product } from "../../lib/graphql/products";
 import styles from "./PurchasePanel.module.css";
 
@@ -9,7 +9,7 @@ const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 99;
 
 interface PurchasePanelProps {
-  product: Pick<Product, "name" | "power" | "quantity" | "price">;
+  product: Pick<Product, "name" | "subtitle" | "price">;
 }
 
 export function PurchasePanel({ product }: PurchasePanelProps) {
@@ -34,7 +34,7 @@ export function PurchasePanel({ product }: PurchasePanelProps) {
   return (
     <div className={styles.panel}>
       <h1 className={styles.title}>{product.name}</h1>
-      <p className={styles.subtitle}>{formatPackSummary(product)}</p>
+      <p className={styles.subtitle}>{product.subtitle}</p>
 
       <div className={styles.purchaseRow}>
         <p className={styles.price}>{formatPrice(product.price)}</p>

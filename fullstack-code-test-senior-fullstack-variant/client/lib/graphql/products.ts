@@ -3,13 +3,11 @@ import { fetchGraphQL } from "./client";
 export interface Product {
   id: string;
   name: string;
-  /** e.g. "25W" */
-  power: string;
+  /** Short line shown under the product name, e.g. "25W // Packet of 4" */
+  subtitle: string;
   description: string;
   /** Price in pence */
   price: number;
-  /** Units per pack, e.g. 4 for "Packet of 4" */
-  quantity: number;
   brand: string;
   /** Grams */
   weight: number;
@@ -27,10 +25,9 @@ const PRODUCT_QUERY = `
     Product(id: $id) {
       id
       name
-      power
+      subtitle
       description
       price
-      quantity
       brand
       weight
       height

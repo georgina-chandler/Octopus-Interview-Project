@@ -5,13 +5,12 @@ import { PurchasePanel } from "../components/PurchasePanel/PurchasePanel";
 
 const product = {
   name: "Energy saving light bulb",
-  power: "25W",
-  quantity: 4,
+  subtitle: "25W // Packet of 4",
   price: 1299,
 };
 
 describe("PurchasePanel", () => {
-  it("renders product name, pack summary and price", () => {
+  it("renders product name, subtitle and price", () => {
     render(<PurchasePanel product={product} />);
 
     expect(

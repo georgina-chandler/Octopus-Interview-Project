@@ -4,10 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 const mockProduct = {
   id: "1",
   name: "Energy saving light bulb",
-  power: "25W",
+  subtitle: "25W // Packet of 4",
   description: "A great bulb",
   price: 1299,
-  quantity: 4,
   brand: "Philips",
   weight: 77,
   height: 12.6,

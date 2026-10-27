@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatDimensions,
-  formatPackSummary,
-  formatPrice,
-} from "../lib/format/product";
+import { formatDimensions, formatPrice } from "../lib/format/product";
 
 describe("formatPrice", () => {
   it("formats pence as a GBP currency string", () => {
@@ -12,14 +8,6 @@ describe("formatPrice", () => {
 
   it("handles whole pounds", () => {
     expect(formatPrice(500)).toBe("£5.00");
-  });
-});
-
-describe("formatPackSummary", () => {
-  it("combines power and pack size", () => {
-    expect(formatPackSummary({ power: "25W", quantity: 4 })).toBe(
-      "25W // Packet of 4",
-    );
   });
 });
 
