@@ -1,15 +1,28 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PurchasePanel } from "../components/PurchasePanel/PurchasePanel";
+import { addBasketItem } from "../lib/basket/client";
+
+vi.mock("../lib/basket/client", () => ({
+  addBasketItem: vi.fn(),
+}));
+
+const mockAddBasketItem = vi.mocked(addBasketItem);
 
 const product = {
+  id: "1",
   name: "Energy saving light bulb",
   subtitle: "25W // Packet of 4",
   price: 1299,
 };
 
 describe("PurchasePanel", () => {
+  beforeEach(() => {
+    mockAddBasketItem.mockReset();
+    mockAddBasketItem.mockResolvedValue({ id: "basket-1", items: [], subtotal: 0 });
+  });
+
   it("renders product name, subtitle and price", () => {
     render(<PurchasePanel product={product} />);
 
@@ -45,14 +58,29 @@ describe("PurchasePanel", () => {
     expect(decrease).toBeDisabled();
   });
 
-  it("confirms the quantity added when 'Add to cart' is clicked", async () => {
+  it("calls addBasketItem with the product id and chosen quantity", async () => {
     const user = userEvent.setup();
     render(<PurchasePanel product={product} />);
 
     await user.click(screen.getByRole("button", { name: "Increase quantity" }));
     await user.click(screen.getByRole("button", { name: "Add to cart" }));
 
-    expect(screen.getByText("Added 2 to your cart")).toBeInTheDocument();
+    expect(mockAddBasketItem).toHaveBeenCalledWith("1", 2);
+  });
+
+  it("confirms the quantity added once the basket mutation resolves", async () => {
+    const user = userEvent.setup();
+    render(<PurchasePanel product={product} />);
+
+    await user.click(screen.getByRole("button", { name: "Add to cart" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Added 1 to your basket/)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("link", { name: "View basket" })).toHaveAttribute(
+      "href",
+      "/basket",
+    );
   });
 
   it("clears the confirmation once quantity changes again", async () => {
@@ -60,9 +88,24 @@ describe("PurchasePanel", () => {
     render(<PurchasePanel product={product} />);
 
     await user.click(screen.getByRole("button", { name: "Add to cart" }));
-    expect(screen.getByText("Added 1 to your cart")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/Added 1 to your basket/)).toBeInTheDocument(),
+    );
 
     await user.click(screen.getByRole("button", { name: "Increase quantity" }));
-    expect(screen.queryByText("Added 1 to your cart")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Added 1 to your basket/)).not.toBeInTheDocument();
+  });
+
+  it("shows an error and re-enables the button when the mutation fails", async () => {
+    mockAddBasketItem.mockRejectedValueOnce(new Error("network error"));
+    const user = userEvent.setup();
+    render(<PurchasePanel product={product} />);
+
+    await user.click(screen.getByRole("button", { name: "Add to cart" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Couldn't add to your basket/)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Add to cart" })).toBeEnabled();
   });
 });

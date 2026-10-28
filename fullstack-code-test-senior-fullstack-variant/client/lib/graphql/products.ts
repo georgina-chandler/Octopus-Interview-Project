@@ -1,5 +1,8 @@
 import { fetchGraphQL } from "./client";
 
+const PRODUCTS_ENDPOINT =
+  process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT ?? "http://localhost:3001/graphql";
+
 export interface Product {
   id: string;
   name: string;
@@ -40,7 +43,10 @@ const PRODUCT_QUERY = `
 `;
 
 export async function getProduct(id: string): Promise<Product | null> {
+  // Opt out of Next's default fetch caching so each page load reflects the
+  // stub's current data rather than a stale cached response.
   const data = await fetchGraphQL<{ Product: Product | null }>(
+    PRODUCTS_ENDPOINT,
     PRODUCT_QUERY,
     { id },
     { cache: "no-store" },

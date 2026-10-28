@@ -69,77 +69,117 @@ We would like you to demonstrate your ability to:
 `client/app/product/page.tsx` is a server component that fetches the product
 over GraphQL from the stub server (`lib/graphql/products.ts` /
 `lib/graphql/client.ts`) and renders it through small, single-responsibility
-components under `client/components/`. The quantity stepper and "Add to
-cart" button live in `PurchasePanel`, the only client component, and hold
-local state only (see below). Styling uses CSS Modules and the brand colour
-variables already in `styles/globals.css`, with a breakpoint at 768px that
-turns the stacked mobile hero into a two-column layout on larger screens.
-Tests live in `client/test/` (formatting helpers, the GraphQL client,
-`PurchasePanel` interactions, `ProductSpecifications`, and the page itself).
+components under `client/components/`. Styling uses CSS Modules and the
+brand colour variables already in `styles/globals.css`, with a breakpoint at
+768px that turns the stacked mobile hero into a two-column layout on larger
+screens.
+
+The basket is a real, working feature, not just UI: "Add to cart" calls a
+GraphQL mutation against a basket API implemented in this app (see below),
+`/basket` lists the current basket and lets you update quantities, remove
+items and clear it, and the header's basket icon links there. Everything
+runs from the one `pnpm dev` command — no extra process or port to start.
+
+Tests live in `client/test/`: formatting helpers, both GraphQL clients, the
+basket store, the basket resolvers (executed through a Yoga instance, not
+mocked), and the UI components (`PurchasePanel`, `BasketView`,
+`QuantityStepper`, `ProductSpecifications`, and the product page itself).
 
 The product route is hardcoded to id `1`, matching the single product the
 stub seeds. In production this would be `/product/[id]`, reading the id from
 the route params.
 
-### Basket API design
+### Basket API
 
-"Add to cart" currently only updates local component state in the browser —
-there's no basket persistence. Below is the schema I'd expose for a real
-basket, and where I'd put it.
+The `products` stub (`json-graphql-server`, port 3001) is generic CRUD and
+can't host custom logic, so the basket is its own GraphQL schema and
+resolvers, served from inside the Next app at `client/app/api/graphql/route.ts`
+(a Route Handler, via [graphql-yoga](https://the-guild.dev/graphql/yoga-server)) —
+same origin as the page, same `pnpm dev`, no separate server to run. Product
+data still comes from the stub; the basket resolvers call `getProduct()`
+server-side.
 
 ```graphql
-type Basket {
+type BasketProduct {
   id: ID!
-  items: [BasketItem!]!
-  subtotal: Int! # pence, server-computed from current product prices
+  name: String!
+  subtitle: String!
+  price: Int! # pence, captured from the catalogue when the item was added
+  imgUrl: String!
 }
 
 type BasketItem {
   id: ID!
-  product: Product!
+  product: BasketProduct!
   quantity: Int!
-  lineTotal: Int! # pence, server-computed
+  lineTotal: Int! # pence: quantity * product.price, always server-computed
+}
+
+type Basket {
+  id: ID!
+  items: [BasketItem!]!
+  subtotal: Int! # pence: sum of every item's lineTotal, always server-computed
 }
 
 type Query {
-  basket: Basket! # resolved from the caller's session/auth context
+  basket: Basket! # resolved from the caller's session — never by id
 }
 
 type Mutation {
-  addBasketItem(productId: ID!, quantity: Int!): Basket!
+  addBasketItem(productId: ID!, quantity: Int = 1): Basket!
   updateBasketItemQuantity(itemId: ID!, quantity: Int!): Basket!
   removeBasketItem(itemId: ID!): Basket!
+  clearBasket: Basket!
 }
 ```
 
-**Responsibilities.** The client only ever sends a `productId` and a
-`quantity` it wants; it never sends a price. The server looks up the current
-product price and computes `lineTotal`/`subtotal` itself and is the single
-source of truth for the basket's contents — the client renders whatever the
-mutation response returns rather than guessing at the new state. The server
-also owns validation: quantity bounds, that the product still exists, and
-(eventually) stock availability.
+(`lib/basket/schema.ts`, `resolvers.ts`, `store.ts`, `session.ts`.)
 
-**Persistence.** `basket` resolves off an identifier in the request —  an
-httpOnly session cookie for anonymous users, merged into the authenticated
-user's basket on login. I'd store baskets in a fast key-value store (e.g.
-Redis) keyed by that id with a TTL for abandoned baskets, rather than a
-relational table, since a basket is read/written far more often than it's
-queried for reporting; if that data is ever needed for analytics I'd stream
-basket events out rather than query the live store.
+**Responsibilities.** The client sends only a `productId` and a `quantity`;
+it never sends a price. `addBasketItem` looks up the product via the
+catalogue API and snapshots `price`/`name`/`subtitle`/`imgUrl` onto the
+basket item at that moment — `lineTotal` and `subtotal` are never stored,
+always recomputed from `quantity * price` on read, so they can't drift out
+of sync. The server owns all validation: quantity must be a whole number in
+`[1, 99]`, the product must exist, and an `updateBasketItemQuantity` /
+`removeBasketItem` must target an item that's actually in the caller's
+basket — all enforced in `resolvers.ts`, independent of (and in addition to)
+the client-side bounds on `QuantityStepper`. Adding a product already in the
+basket merges into the existing line (capped at 99) rather than creating a
+duplicate row.
 
-**Performance.** Product data (price, name, etc.) is read-heavy and
-cacheable (CDN/ISR), whereas basket mutations are low-latency, per-user
-writes that shouldn't be cached — keeping them as separate concerns, as the
-schema above does, avoids tying basket write latency to catalogue cache
-invalidation. Basket mutations return the full updated basket so the client
-never needs a follow-up fetch.
+**What's actually running vs. a production shape.** The store
+(`lib/basket/store.ts`) is an in-memory `Map` keyed by session id — enough
+to demo the full flow and exercise the schema, but it resets on every server
+restart and wouldn't be shared across instances of a horizontally-scaled or
+serverless deployment. A real deployment would swap that module for Redis
+(or similar), keyed the same way, with a TTL for abandoned baskets, without
+the resolvers needing to change. Basket items are shaped so a later
+checkout page could consume them directly (`product` snapshot + `quantity` +
+server-computed `lineTotal`/`subtotal`) even though no such page exists here.
 
-**Security.** All mutations re-derive price server-side and never trust a
-client-submitted amount. Basket identity comes from the session (httpOnly,
-signed cookie), not a client-supplied id, so one user can't read or mutate
-another's basket. Mutation endpoints need CSRF protection since they're
-state-changing, and quantity/rate limits on `addBasketItem` /
-`updateBasketItemQuantity` guard against scripted abuse.
+**Performance.** Product data is read-heavy and cacheable (the product page
+fetch uses `no-store` only because the demo stub's data can change
+underneath it); basket mutations are low-latency, per-user writes that
+shouldn't be cached — keeping them on a separate endpoint from the product
+catalogue, as implemented, avoids tying basket write latency to catalogue
+cache invalidation. Every basket mutation returns the full updated basket so
+the client never needs a follow-up query (see `lib/basket/client.ts`). Price
+is snapshotted at add-time rather than looked up live on every basket read,
+which keeps the basket view's price stable while browsing — a real checkout
+step would still re-validate against the current catalogue price before
+taking payment, since a snapshot alone isn't enough to guarantee the price
+hasn't changed since the item was added.
+
+**Security.** Basket identity comes from an httpOnly, `SameSite=Lax` session
+cookie (`lib/basket/session.ts`) minted on first request — never from a
+client-supplied basket id — so one session can't read or mutate another's
+basket (no IDOR). All mutations re-derive price server-side from the
+catalogue and never trust a client-submitted amount. Not implemented here,
+but needed for production: CSRF protection on the mutation endpoint (the
+session cookie alone isn't sufficient defense-in-depth for a public API),
+rate limiting on `addBasketItem`/`updateBasketItemQuantity` to guard against
+scripted abuse, and merging an anonymous session's basket into the user's
+account basket on login.
 
 Best of luck!

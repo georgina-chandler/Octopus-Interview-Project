@@ -1,0 +1,37 @@
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.button {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--plum);
+  color: var(--ice);
+}
+
+.buttonAdd {
+  background: var(--sohoLights);
+  color: var(--hemocyanin);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.value {
+  min-width: 1.5rem;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+}

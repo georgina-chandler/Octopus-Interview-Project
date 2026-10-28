@@ -41,44 +41,6 @@
   color: var(--purpleHaze);
 }
 
-.stepperControls {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.stepperButton {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 999px;
-  border: none;
-  font-size: 1.25rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  background: var(--plum);
-  color: var(--ice);
-}
-
-.stepperButtonAdd {
-  background: var(--sohoLights);
-  color: var(--hemocyanin);
-}
-
-.stepperButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.stepperValue {
-  min-width: 1.5rem;
-  text-align: center;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
 .addToCart {
   display: block;
   width: 100%;
@@ -101,10 +63,20 @@
   filter: brightness(0.95);
 }
 
+.addToCart:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .addedMessage {
   min-height: 1.25rem;
   margin: 0.75rem 0 0;
   text-align: center;
   color: var(--purpleHaze);
   font-size: 0.875rem;
+}
+
+.basketLink {
+  color: var(--sohoLights);
+  font-weight: 700;
 }

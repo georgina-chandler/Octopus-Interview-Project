@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./SiteHeader.module.css";
 
 export function SiteHeader() {
@@ -12,9 +13,9 @@ export function SiteHeader() {
           height={24}
           priority
         />
-        <button type="button" className={styles.basketButton} aria-label="View basket">
+        <Link href="/basket" className={styles.basketButton} aria-label="View basket">
           <Image src="/basket.svg" alt="" width={22} height={20} aria-hidden="true" />
-        </button>
+        </Link>
       </div>
     </header>
   );

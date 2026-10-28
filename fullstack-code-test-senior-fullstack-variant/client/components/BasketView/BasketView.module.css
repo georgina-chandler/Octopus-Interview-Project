@@ -1,0 +1,115 @@
+.status {
+  color: var(--purpleHaze);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  color: var(--purpleHaze);
+}
+
+.continueLink {
+  color: var(--sohoLights);
+  font-weight: 700;
+}
+
+.list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid rgba(240, 255, 255, 0.1);
+}
+
+.list .item:last-child {
+  border-bottom: 1px solid rgba(240, 255, 255, 0.1);
+}
+
+.itemInfo {
+  min-width: 0;
+}
+
+.itemName {
+  margin: 0;
+  font-weight: 700;
+}
+
+.itemSubtitle {
+  margin: 0.25rem 0 0;
+  color: var(--purpleHaze);
+  font-size: 0.875rem;
+}
+
+.itemTotal {
+  margin: 0;
+  font-weight: 700;
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.removeButton {
+  border: none;
+  background: none;
+  color: var(--purpleHaze);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.removeButton:hover {
+  color: var(--ice);
+}
+
+.removeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.subtotal {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.clearButton {
+  border: none;
+  background: none;
+  color: var(--purpleHaze);
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.clearButton:hover {
+  color: var(--ice);
+}
+
+@media (max-width: 30rem) {
+  .item {
+    grid-template-columns: 1fr auto;
+    row-gap: 0.75rem;
+  }
+
+  .itemTotal {
+    text-align: left;
+  }
+}

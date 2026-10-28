@@ -1,6 +1,3 @@
-const GRAPHQL_ENDPOINT =
-  process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT ?? "http://localhost:3001/graphql";
-
 interface GraphQLResponse<TData> {
   data?: TData;
   errors?: { message: string }[];
@@ -10,11 +7,12 @@ export async function fetchGraphQL<
   TData,
   TVariables extends Record<string, unknown> = Record<string, unknown>,
 >(
+  endpoint: string,
   query: string,
   variables?: TVariables,
   init?: RequestInit,
 ): Promise<TData> {
-  const res = await fetch(GRAPHQL_ENDPOINT, {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
