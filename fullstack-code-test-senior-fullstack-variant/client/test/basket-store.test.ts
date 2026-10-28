@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import * as store from "../lib/basket/store";
+// The basket store lives in server/ now (a standalone service — see
+// server/basket-server.js), not under client/. Importing its source
+// directly here for testing purposes only; nothing in the client app's own
+// runtime imports it.
+import * as store from "../../server/basket/store";
 import type { BasketProduct } from "../lib/basket/types";
 
 const bulb: BasketProduct = {

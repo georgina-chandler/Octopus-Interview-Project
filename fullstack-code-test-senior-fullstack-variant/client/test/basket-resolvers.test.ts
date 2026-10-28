@@ -1,32 +1,28 @@
 import { createSchema, createYoga } from "graphql-yoga";
 import { describe, expect, it, vi } from "vitest";
-import { resolvers } from "../lib/basket/resolvers";
-import { typeDefs } from "../lib/basket/schema";
+// The basket schema/resolvers live in server/ now (a standalone service —
+// see server/basket-server.js), not under client/. Importing the source
+// directly here for testing purposes only; nothing in the client app's own
+// runtime imports it.
+import { resolvers } from "../../server/basket/resolvers";
+import { typeDefs } from "../../server/basket/schema";
 
 const mockBulb = {
   id: "1",
   name: "Energy saving light bulb",
   subtitle: "25W // Packet of 4",
-  description: "A great bulb",
   price: 1299,
-  brand: "Philips",
-  weight: 77,
-  height: 12.6,
-  width: 6.2,
-  length: 6.2,
-  model_code: "E27 ES",
-  colour: "Cool daylight",
   img_url: "https://example.com/bulb.png",
 };
 
-vi.mock("../lib/graphql/products", () => ({
+vi.mock("../../server/basket/products", () => ({
   getProduct: vi.fn(async (id: string) => (id === "1" ? mockBulb : null)),
 }));
 
-// A separate Yoga instance from the production route handler's: same schema
-// and resolvers (the thing under test), but a context factory that reads
-// the session id straight off a header instead of a Next.js cookie, since
-// next/headers' cookies() only works inside an actual Next request scope.
+// A separate Yoga instance from the production server's: same schema and
+// resolvers (the thing under test), but a context factory that reads the
+// session id straight off a header, mirroring the real server's session
+// handling without needing to go through actual cookies/HTTP in a test.
 const yoga = createYoga({
   schema: createSchema({ typeDefs, resolvers }),
   context: async ({ request }: { request: Request }) => ({

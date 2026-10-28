@@ -1,4 +1,4 @@
-export const typeDefs = /* GraphQL */ `
+const typeDefs = /* GraphQL */ `
   """
   A snapshot of the catalogue fields needed to render a basket item. Price
   is captured at add-time, not looked up live on every basket read — see
@@ -50,3 +50,5 @@ export const typeDefs = /* GraphQL */ `
     clearBasket: Basket!
   }
 `;
+
+module.exports = { typeDefs };

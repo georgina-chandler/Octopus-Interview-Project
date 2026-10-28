@@ -1,10 +1,13 @@
 import { fetchGraphQL } from "../graphql/client";
 import type { Basket } from "./types";
 
-// Relative path: this endpoint is served by the Next app itself (see
-// app/api/graphql/route.ts), so it's always same-origin and the session
-// cookie is sent automatically — no base URL or credentials option needed.
-const BASKET_ENDPOINT = "/api/graphql";
+// The basket is its own standalone server (see server/basket-server.js),
+// not part of the Next app, so this is cross-origin from the browser's
+// point of view — it needs an absolute URL and `credentials: "include"` so
+// the session cookie is sent and the Set-Cookie response is honoured.
+const BASKET_ENDPOINT =
+  process.env.NEXT_PUBLIC_BASKET_GRAPHQL_ENDPOINT ?? "http://localhost:3002/graphql";
+const REQUEST_INIT: RequestInit = { credentials: "include" };
 
 const BASKET_FIELDS = `
   id
@@ -50,7 +53,12 @@ const CLEAR_BASKET_MUTATION = `
 `;
 
 export async function getBasket(): Promise<Basket> {
-  const data = await fetchGraphQL<{ basket: Basket }>(BASKET_ENDPOINT, BASKET_QUERY);
+  const data = await fetchGraphQL<{ basket: Basket }>(
+    BASKET_ENDPOINT,
+    BASKET_QUERY,
+    undefined,
+    REQUEST_INIT,
+  );
   return data.basket;
 }
 
@@ -59,6 +67,7 @@ export async function addBasketItem(productId: string, quantity: number): Promis
     BASKET_ENDPOINT,
     ADD_BASKET_ITEM_MUTATION,
     { productId, quantity },
+    REQUEST_INIT,
   );
   return data.addBasketItem;
 }
@@ -71,6 +80,7 @@ export async function updateBasketItemQuantity(
     BASKET_ENDPOINT,
     UPDATE_BASKET_ITEM_QUANTITY_MUTATION,
     { itemId, quantity },
+    REQUEST_INIT,
   );
   return data.updateBasketItemQuantity;
 }
@@ -80,6 +90,7 @@ export async function removeBasketItem(itemId: string): Promise<Basket> {
     BASKET_ENDPOINT,
     REMOVE_BASKET_ITEM_MUTATION,
     { itemId },
+    REQUEST_INIT,
   );
   return data.removeBasketItem;
 }
@@ -88,6 +99,8 @@ export async function clearBasket(): Promise<Basket> {
   const data = await fetchGraphQL<{ clearBasket: Basket }>(
     BASKET_ENDPOINT,
     CLEAR_BASKET_MUTATION,
+    undefined,
+    REQUEST_INIT,
   );
   return data.clearBasket;
 }

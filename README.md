@@ -13,15 +13,20 @@ brand colour variables already in `styles/globals.css`, with a breakpoint at
 screens.
 
 The basket is a real, working feature, not just UI: "Add to cart" calls a
-GraphQL mutation against a basket API implemented in this app (see below),
+GraphQL mutation against a genuinely separate basket server (see below),
 `/basket` lists the current basket and lets you update quantities, remove
-items and clear it, and the header's basket icon links there. Everything
-runs from the one `pnpm dev` command — no extra process or port to start.
+items and clear it, and the header's basket icon links there. `pnpm dev`
+(from `client/`) still starts everything — the product stub, the basket
+server, and the Next app — no extra install step or manual process.
 
 Tests live in `client/test/`: formatting helpers, both GraphQL clients, the
 basket store, the basket resolvers (executed through a Yoga instance, not
 mocked), and the UI components (`PurchasePanel`, `BasketView`,
-`QuantityStepper`, `ProductSpecifications`, and the product page itself).
+`QuantityStepper`, `ProductSpecifications`, and the product page itself). The
+basket store/resolver tests import `server/basket/*` directly by relative
+path — that's a test-only shortcut to keep a single `pnpm test` entry point
+without a second install; it doesn't reflect any runtime coupling between
+the two services.
 
 The product route is hardcoded to id `1`, matching the single product the
 stub seeds. In production this would be `/product/[id]`, reading the id from
@@ -30,12 +35,25 @@ the route params.
 ## Basket API
 
 The `products` stub (`json-graphql-server`, port 3001) is generic CRUD and
-can't host custom logic, so the basket is its own GraphQL schema and
-resolvers, served from inside the Next app at `client/app/api/graphql/route.ts`
-(a Route Handler, via [graphql-yoga](https://the-guild.dev/graphql/yoga-server)) —
-same origin as the page, same `pnpm dev`, no separate server to run. Product
-data still comes from the stub; the basket resolvers call `getProduct()`
-server-side.
+can't host custom logic, so the basket is its own, genuinely standalone
+Node server — `server/basket-server.js`, with its schema/resolvers/store
+under `server/basket/` — listening on its own port (3002), started
+alongside the other two by `client/package.json`'s `basket-server` script.
+It isn't a Next.js route: it's a plain `http.createServer` using
+[graphql-yoga](https://the-guild.dev/graphql/yoga-server) for the GraphQL
+layer, so from the browser's point of view it's a cross-origin API, not
+same-origin like the rest of the app. The basket server doesn't import the
+Next app's code to read product data — it calls the product stub over HTTP
+itself (`server/basket/products.js`), exactly as a separate product-catalogue
+service would in a real deployment.
+
+`server/` deliberately has no `package.json`/install step of its own, to
+keep `cd client && pnpm install` the only setup command (per the original
+README, which this doesn't touch): `graphql`/`graphql-yoga` are installed as
+devDependencies of `client/`, and `server/require-from-client.js` resolves
+them explicitly from there for the two files that need them
+(`basket-server.js`, `basket/resolvers.js`). A standalone deployment of this
+service would instead give it its own `package.json` and install step.
 
 ```graphql
 type BasketProduct {
@@ -71,7 +89,8 @@ type Mutation {
 }
 ```
 
-(`lib/basket/schema.ts`, `resolvers.ts`, `store.ts`, `session.ts`.)
+(`server/basket/schema.js`, `resolvers.js`, `store.js`, `session.js`; the
+browser-side client that calls this API lives at `client/lib/basket/client.ts`.)
 
 **Responsibilities.** The client sends only a `productId` and a `quantity`;
 it never sends a price. `addBasketItem` looks up the product via the
@@ -81,13 +100,13 @@ always recomputed from `quantity * price` on read, so they can't drift out
 of sync. The server owns all validation: quantity must be a whole number in
 `[1, 99]`, the product must exist, and an `updateBasketItemQuantity` /
 `removeBasketItem` must target an item that's actually in the caller's
-basket — all enforced in `resolvers.ts`, independent of (and in addition to)
+basket — all enforced in `resolvers.js`, independent of (and in addition to)
 the client-side bounds on `QuantityStepper`. Adding a product already in the
 basket merges into the existing line (capped at 99) rather than creating a
 duplicate row.
 
 **What's actually running vs. a production shape.** The store
-(`lib/basket/store.ts`) is an in-memory `Map` keyed by session id — enough
+(`server/basket/store.js`) is an in-memory `Map` keyed by session id — enough
 to demo the full flow and exercise the schema, but it resets on every server
 restart and wouldn't be shared across instances of a horizontally-scaled or
 serverless deployment. A real deployment would swap that module for Redis
@@ -109,13 +128,27 @@ step would still re-validate against the current catalogue price before
 taking payment, since a snapshot alone isn't enough to guarantee the price
 hasn't changed since the item was added.
 
-**Security.** Basket identity comes from an httpOnly, `SameSite=Lax` session
-cookie (`lib/basket/session.ts`) minted on first request — never from a
+**Security.** Basket identity comes from an httpOnly session cookie
+(`server/basket/session.js`) minted on first request — never from a
 client-supplied basket id — so one session can't read or mutate another's
 basket (no IDOR). All mutations re-derive price server-side from the
-catalogue and never trust a client-submitted amount. Not implemented here,
-but needed for production: CSRF protection on the mutation endpoint (the
-session cookie alone isn't sufficient defense-in-depth for a public API),
-rate limiting on `addBasketItem`/`updateBasketItemQuantity` to guard against
-scripted abuse, and merging an anonymous session's basket into the user's
-account basket on login.
+catalogue and never trust a client-submitted amount.
+
+Because the basket server is on a different port from the Next app, the
+browser treats every call as cross-origin: CORS is handled explicitly
+(`server/basket-server.js`), with the allowed origin read from
+`CLIENT_ORIGIN` rather than `*`, since credentialed requests (ones that
+send cookies) can't use a wildcard origin. The session cookie itself is
+`SameSite=Lax` rather than `None; Secure` — `localhost:3000` and
+`localhost:3002` are different *origins* but the same *site* (SameSite
+ignores port), so `Lax` is sent on these cross-port requests without
+needing HTTPS in dev; a deployment on genuinely different domains would
+need `SameSite=None; Secure` instead.
+
+Not implemented here, but needed for production: CSRF protection on the
+mutation endpoint (an explicit, non-wildcard CORS origin plus `SameSite=Lax`
+raises the bar for a drive-by cross-site request, but isn't a substitute for
+a real CSRF token on state-changing requests), rate limiting on
+`addBasketItem`/`updateBasketItemQuantity` to guard against scripted abuse,
+and merging an anonymous session's basket into the user's account basket on
+login.

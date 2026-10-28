@@ -40,14 +40,15 @@ afterEach(() => {
 });
 
 describe("basket client", () => {
-  it("getBasket posts to the same-origin /api/graphql endpoint", async () => {
+  it("getBasket posts to the basket server with credentials included", async () => {
     const fetchMock = mockFetchOnce("basket");
 
     const basket = await getBasket();
 
     expect(basket).toEqual(mockBasket);
-    const [url] = fetchMock.mock.calls[0];
-    expect(url).toBe("/api/graphql");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://localhost:3002/graphql");
+    expect(init.credentials).toBe("include");
   });
 
   it("addBasketItem sends productId and quantity as variables", async () => {
