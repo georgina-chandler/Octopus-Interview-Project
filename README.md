@@ -89,9 +89,9 @@ basket.
 **Responsibilities.** The client sends only a `productId` and a `quantity`;
 and not the price to the basket server. `addBasketItem` looks up the product 
 via the catalogue API and snapshots `price`/`name`/`subtitle`/`imgUrl` onto the
-basket item at that moment. `lineTotal` and `subtotal` are never stored,
-always recomputed from `quantity * price` on read, so they can't drift out
-of sync. The server owns all validation: quantity must be a whole number in
+basket item at that moment. `lineTotal` and `subtotal` are not stored,
+always recomputed from `quantity * price`, so that they can't drift out
+of sync. The server owns the validation: quantity must be a whole number in
 `[1, 99]`, the product must exist, and an `updateBasketItemQuantity` /
 `removeBasketItem` must target an item that's actually in the caller's
 basket — all enforced in `resolvers.js`, independent of (and in addition to)
@@ -99,50 +99,47 @@ the client-side bounds on `QuantityStepper`. Adding a product already in the
 basket merges into the existing line (capped at 99) rather than creating a
 duplicate row.
 
-**What's actually running vs. a production shape.** The store
-(`server/basket/store.js`) is an in-memory `Map` keyed by session id — enough
-to demo the full flow and exercise the schema, but it resets on every server
-restart and wouldn't be shared across instances of a horizontally-scaled or
-serverless deployment. A real deployment would swap that module for Redis
-(or similar), keyed the same way, with a TTL for abandoned baskets, without
-the resolvers needing to change. Basket items are shaped so a later
-checkout page could consume them directly (`product` snapshot + `quantity` +
-server-computed `lineTotal`/`subtotal`) even though no such page exists here.
+**Persistence.** The store (`server/basket/store.js`) is an in-memory `Map` 
+keyed by session id — enough to demo the full flow and exercise the schema, 
+but it resets on every server restart and wouldn't be shared across instances 
+of a horizontally-scaled or serverless deployment. A real deployment would 
+swap that module for Redis(or similar), keyed the same way, with a time to live
+for abandoned baskets, without the resolvers needing to change. Basket items 
+are shaped so a later checkout page could consume them directly (`product` 
+snapshot + `quantity` + server-computed `lineTotal`/`subtotal`).
 
-**Performance.** Product data is read-heavy and cacheable (the product page
-fetch uses `no-store` only because the demo stub's data can change
-underneath it); basket mutations are low-latency, per-user writes that
-shouldn't be cached — keeping them on a separate endpoint from the product
-catalogue, as implemented, avoids tying basket write latency to catalogue
-cache invalidation. Every basket mutation returns the full updated basket so
-the client never needs a follow-up query (see `lib/basket/client.ts`). Price
-is snapshotted at add-time rather than looked up live on every basket read,
-which keeps the basket view's price stable while browsing — a real checkout
-step would still re-validate against the current catalogue price before
-taking payment, since a snapshot alone isn't enough to guarantee the price
+**Performance.** Product data is read-heavy as every user who visits the 
+product page will load it and cacheable (the product page fetch uses `no-store` 
+only because the demo stub's data can change underneath it); basket mutations 
+are low-latency, per-user writes that shouldn't be cached, keeping them on a 
+separate endpoint from the product catalogue, as implemented, avoids tying 
+basket write latency to product catalogue cache invalidation. Every basket 
+mutation returns the complete updated basket so the client never needs a 
+follow-up query (see `lib/basket/client.ts`). A product's price is read once,
+at add-time, from the product catalogue rather than looked up live on every 
+basket read, which keeps the basket view's price stable while browsing. A real 
+checkout step should still re-validate against the current catalogue price 
+before taking payment, since a snapshot doesn't guarantee that the price 
 hasn't changed since the item was added.
 
-**Security.** Basket identity comes from an httpOnly session cookie
-(`server/basket/session.js`) minted on first request — never from a
-client-supplied basket id — so one session can't read or mutate another's
-basket (no IDOR). All mutations re-derive price server-side from the
-catalogue and never trust a client-submitted amount.
+**Security.** The basket session ID comes from an httpOnly session cookie
+(`server/basket/session.js`) created on first request, never from a
+client-supplied basket id, so one session can't read or mutate another's
+basket, no insecure direct object references. All mutations re-derive 
+price server-side from the catalogue and do not trust a client-submitted 
+amount.
 
 Because the basket server is on a different port from the Next app, the
 browser treats every call as cross-origin: CORS is handled explicitly
 (`server/basket-server.js`), with the allowed origin read from
-`CLIENT_ORIGIN` rather than `*`, since credentialed requests (ones that
-send cookies) can't use a wildcard origin. The session cookie itself is
-`SameSite=Lax` rather than `None; Secure` — `localhost:3000` and
-`localhost:3002` are different *origins* but the same *site* (SameSite
-ignores port), so `Lax` is sent on these cross-port requests without
-needing HTTPS in dev; a deployment on genuinely different domains would
-need `SameSite=None; Secure` instead.
+`CLIENT_ORIGIN` rather than `*`, since credentialed requests can't use a 
+wildcard origin. The session cookie itself is `SameSite=Lax` rather than 
+`None; Secure`, `localhost:3000` and `localhost:3002` are different 
+*origins* but the same *site* (SameSite ignores port), so `Lax` is sent 
+on these cross-port requests without needing HTTPS in dev; a deployment 
+on different domains would need `SameSite=None; Secure` instead.
 
-Not implemented here, but needed for production: CSRF protection on the
-mutation endpoint (an explicit, non-wildcard CORS origin plus `SameSite=Lax`
-raises the bar for a drive-by cross-site request, but isn't a substitute for
-a real CSRF token on state-changing requests), rate limiting on
-`addBasketItem`/`updateBasketItemQuantity` to guard against scripted abuse,
-and merging an anonymous session's basket into the user's account basket on
-login.
+Not implemented here, but needed for production: Cross-Site request forgery 
+protection on the mutation endpoint if a malicious site was to send the real 
+basket session id and rate limiting on `addBasketItem`/`updateBasketItemQuantity` 
+to guard against scripted abuse.
