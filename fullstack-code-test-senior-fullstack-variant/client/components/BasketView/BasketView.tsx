@@ -89,6 +89,21 @@ export function BasketView() {
       <ul className={styles.list}>
         {basket.items.map((item) => (
           <li className={styles.item} key={item.id}>
+            <img
+              className={styles.thumbnail}
+              src={item.product.imgUrl}
+              alt=""
+              width={56}
+              height={56}
+              loading="lazy"
+              // product images are hosted externally (see the catalogue
+              // stub's img_url) — hide the broken-image icon rather than
+              // show it if that host is ever down or the link has rotted.
+              onError={(event) => {
+                event.currentTarget.style.visibility = "hidden";
+              }}
+            />
+
             <div className={styles.itemInfo}>
               <p className={styles.itemName}>{item.product.name}</p>
               <p className={styles.itemSubtitle}>{item.product.subtitle}</p>

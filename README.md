@@ -44,6 +44,8 @@ product-catalogue service would in a real deployment.
 `server/` has no `package.json`/install step of its own, to keep the setup commands 
 simple.
 
+GraphQL Schema:
+
 ```graphql
 type BasketProduct {
   id: ID!
@@ -78,13 +80,16 @@ type Mutation {
 }
 ```
 
-(`server/basket/schema.js`, `resolvers.js`, `store.js`, `session.js`; the
-browser-side client that calls this API lives at `client/lib/basket/client.ts`.)
+Note: product ids are used to identify items in the product catalogue. 
+When products are added to the basket they are assigned an item id separate
+from their product id. This allows line items in the basket to be modified 
+independently and for multiple variations of the product to be added to the
+basket.
 
 **Responsibilities.** The client sends only a `productId` and a `quantity`;
-it never sends a price. `addBasketItem` looks up the product via the
-catalogue API and snapshots `price`/`name`/`subtitle`/`imgUrl` onto the
-basket item at that moment — `lineTotal` and `subtotal` are never stored,
+and not the price to the basket server. `addBasketItem` looks up the product 
+via the catalogue API and snapshots `price`/`name`/`subtitle`/`imgUrl` onto the
+basket item at that moment. `lineTotal` and `subtotal` are never stored,
 always recomputed from `quantity * price` on read, so they can't drift out
 of sync. The server owns all validation: quantity must be a whole number in
 `[1, 99]`, the product must exist, and an `updateBasketItemQuantity` /
