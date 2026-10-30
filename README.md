@@ -1,6 +1,8 @@
 # Implementation notes
 
-Notes on the solution in [`fullstack-code-test-senior-fullstack-variant`](fullstack-code-test-senior-fullstack-variant/), kept separate from that directory's own `README.md` (the original code test brief, left untouched).
+I used Claude Code for assistance implementing my ideas for this project. I 
+chose to write enough so that it would be functional and ready for an 
+internal demo.
 
 ## What's implemented
 
@@ -12,48 +14,31 @@ brand colour variables already in `styles/globals.css`, with a breakpoint at
 768px that turns the stacked mobile hero into a two-column layout on larger
 screens.
 
-The basket is a real, working feature, not just UI: "Add to cart" calls a
-GraphQL mutation against a genuinely separate basket server (see below),
-`/basket` lists the current basket and lets you update quantities, remove
-items and clear it, and the header's basket icon links there. `pnpm dev`
-(from `client/`) still starts everything — the product stub, the basket
-server, and the Next app — no extra install step or manual process.
+The basket is also implemented: "Add to cart" calls a GraphQL mutation 
+against a separate basket server (see below), `/basket` shows the user the 
+current basket and lets them update quantities, remove items and clear it, 
+and the header's basket icon links there. `pnpm dev` (from `client/`) starts 
+everything — the product stub, the basket server, and the Next app.
 
-Tests live in `client/test/`: formatting helpers, both GraphQL clients, the
-basket store, the basket resolvers (executed through a Yoga instance, not
-mocked), and the UI components (`PurchasePanel`, `BasketView`,
-`QuantityStepper`, `ProductSpecifications`, and the product page itself). The
-basket store/resolver tests import `server/basket/*` directly by relative
-path — that's a test-only shortcut to keep a single `pnpm test` entry point
-without a second install; it doesn't reflect any runtime coupling between
-the two services.
+Tests live in `client/test/`: there are basic tests for formatting helpers, 
+both GraphQL clients, the basket store, the basket resolvers, and the UI components.
 
-The product route is hardcoded to id `1`, matching the single product the
-stub seeds. In production this would be `/product/[id]`, reading the id from
-the route params.
+The product route is hardcoded to id `1`, matching the demo light bulb product. 
+In production this would be `/product/[id]`, reading the id from the route params.
 
 ## Basket API
 
-The `products` stub (`json-graphql-server`, port 3001) is generic CRUD and
-can't host custom logic, so the basket is its own, genuinely standalone
-Node server — `server/basket-server.js`, with its schema/resolvers/store
-under `server/basket/` — listening on its own port (3002), started
-alongside the other two by `client/package.json`'s `basket-server` script.
-It isn't a Next.js route: it's a plain `http.createServer` using
-[graphql-yoga](https://the-guild.dev/graphql/yoga-server) for the GraphQL
-layer, so from the browser's point of view it's a cross-origin API, not
-same-origin like the rest of the app. The basket server doesn't import the
-Next app's code to read product data — it calls the product stub over HTTP
-itself (`server/basket/products.js`), exactly as a separate product-catalogue
-service would in a real deployment.
+The basket is a standalone Node server — `server/basket-server.js`, with its 
+schema/resolvers/store under `server/basket/` — listening on its own port (3002), 
+started alongside the product server and the Next.js app by `client/package.json`'s 
+`basket-server` script. The basket server uses 
+[graphql-yoga](https://the-guild.dev/graphql/yoga-server) for the GraphQL layer, 
+so it is a cross-origin API, not same-origin like the rest of the app. The basket 
+server calls the product stub over HTTP (`server/basket/products.js`), as a separate 
+product-catalogue service would in a real deployment.
 
-`server/` deliberately has no `package.json`/install step of its own, to
-keep `cd client && pnpm install` the only setup command (per the original
-README, which this doesn't touch): `graphql`/`graphql-yoga` are installed as
-devDependencies of `client/`, and `server/require-from-client.js` resolves
-them explicitly from there for the two files that need them
-(`basket-server.js`, `basket/resolvers.js`). A standalone deployment of this
-service would instead give it its own `package.json` and install step.
+`server/` deliberately has no `package.json`/install step of its own, to keep 
+the setup commands simple.
 
 ```graphql
 type BasketProduct {
