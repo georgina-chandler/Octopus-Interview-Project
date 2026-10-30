@@ -36,8 +36,7 @@ The basket is a standalone Node server: `server/basket-server.js`, with its
 schema/resolvers/store under `server/basket/` listening on its own port (3002), 
 started alongside the product server and the Next.js app by `client/package.json`'s 
 `basket-server` script. The basket server uses 
-[graphql-yoga](https://the-guild.dev/graphql/yoga-server) for the GraphQL layer, 
-so it is a cross-origin API, not same-origin like the rest of the app. The basket 
+[graphql-yoga](https://the-guild.dev/graphql/yoga-server) for the GraphQL layer. The basket 
 server calls the product stub over HTTP (`server/basket/products.js`), as a separate 
 product-catalogue service would in a real deployment.
 
