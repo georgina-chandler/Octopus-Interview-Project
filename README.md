@@ -4,6 +4,10 @@ I used Claude Code for assistance implementing my ideas for this project. I
 chose to write enough so that it would be functional and ready for an 
 internal demo.
 
+To run the demo use this command:
+
+```cd fullstack-code-test-senior-fullstack-variant/client && pnpm dev```
+
 ## What's implemented
 
 `client/app/product/page.tsx` is a server component that fetches the product
@@ -37,8 +41,8 @@ so it is a cross-origin API, not same-origin like the rest of the app. The baske
 server calls the product stub over HTTP (`server/basket/products.js`), as a separate 
 product-catalogue service would in a real deployment.
 
-`server/` deliberately has no `package.json`/install step of its own, to keep 
-the setup commands simple.
+`server/` has no `package.json`/install step of its own, to keep the setup commands 
+simple.
 
 ```graphql
 type BasketProduct {
