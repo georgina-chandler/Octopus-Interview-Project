@@ -22,7 +22,7 @@ The basket is also implemented: "Add to cart" calls a GraphQL mutation
 against a separate basket server (see below), `/basket` shows the user the 
 current basket and lets them update quantities, remove items and clear it, 
 and the header's basket icon links there. `pnpm dev` (from `client/`) starts 
-everything — the product stub, the basket server, and the Next app.
+everything: the product stub, the basket server, and the Next app.
 
 Tests live in `client/test/`: there are basic tests for formatting helpers, 
 both GraphQL clients, the basket store, the basket resolvers, and the UI components.
@@ -32,8 +32,8 @@ In production this would be `/product/[id]`, reading the id from the route param
 
 ## Basket API
 
-The basket is a standalone Node server — `server/basket-server.js`, with its 
-schema/resolvers/store under `server/basket/` — listening on its own port (3002), 
+The basket is a standalone Node server: `server/basket-server.js`, with its 
+schema/resolvers/store under `server/basket/` listening on its own port (3002), 
 started alongside the product server and the Next.js app by `client/package.json`'s 
 `basket-server` script. The basket server uses 
 [graphql-yoga](https://the-guild.dev/graphql/yoga-server) for the GraphQL layer, 
@@ -94,13 +94,13 @@ always recomputed from `quantity * price`, so that they can't drift out
 of sync. The server owns the validation: quantity must be a whole number in
 `[1, 99]`, the product must exist, and an `updateBasketItemQuantity` /
 `removeBasketItem` must target an item that's actually in the caller's
-basket — all enforced in `resolvers.js`, independent of (and in addition to)
+basket. This is enforced in `resolvers.js`, independent of (and in addition to)
 the client-side bounds on `QuantityStepper`. Adding a product already in the
 basket merges into the existing line (capped at 99) rather than creating a
 duplicate row.
 
 **Persistence.** The store (`server/basket/store.js`) is an in-memory `Map` 
-keyed by session id — enough to demo the full flow and exercise the schema, 
+keyed by session id. This is enough to demo the full flow and exercise the schema, 
 but it resets on every server restart and wouldn't be shared across instances 
 of a horizontally-scaled or serverless deployment. A real deployment would 
 swap that module for Redis(or similar), keyed the same way, with a time to live
